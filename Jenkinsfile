@@ -4,10 +4,10 @@ pipeline {
         label 'devops-sre-agent'
     }
 
-
     environment {
         IMAGE_NAME = "devops-sre-demo"
-        IMAGE_TAG  = "1.0.2"
+        IMAGE_TAG  = "1.0.5"
+        REGISTRY   = "192.168.127.2:5000"
     }
 
     stages {
@@ -39,8 +39,8 @@ pipeline {
             steps {
                 sh '''
                     docker build \
-                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                      ./app
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                        ./app
                 '''
             }
         }
@@ -48,10 +48,41 @@ pipeline {
         stage('Trivy Security Scan') {
             steps {
                 sh '''
+                    echo "=== Trivy Vulnerability Report ==="
+
                     trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      ${IMAGE_NAME}:${IMAGE_TAG}
+                        --severity HIGH,CRITICAL \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Trivy Security Gate') {
+            steps {
+                sh '''
+                    echo "=== Trivy CRITICAL Security Gate ==="
+
+                    trivy image \
+                        --severity CRITICAL \
+                        --exit-code 1 \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                    echo "=== Tagging Image ==="
+
+                    docker tag \
+                        ${IMAGE_NAME}:${IMAGE_TAG} \
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+
+                    echo "=== Pushing Image ==="
+
+                    docker push \
+                        ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
