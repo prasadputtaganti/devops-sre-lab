@@ -1,5 +1,9 @@
 pipeline {
-    agent any
+
+    agent {
+        label 'devops-sre-agent'
+    }
+
 
     environment {
         IMAGE_NAME = "devops-sre-demo"
